@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { Tools } from "./tools";
-import { executeTool } from "./utils";
+import { executeTool, getAllTools } from "./utils";
 import { ToolEnum } from "./types";
 import type { ChatCompletionMessageParam } from "openai/resources";
 
@@ -30,7 +30,7 @@ async function main() {
     const response = await client.chat.completions.create({
       model: "anthropic/claude-haiku-5.5",
       messages,
-      tools: [Tools[ToolEnum.Read].definition],
+      tools: getAllTools(),
     });
 
     if (!response.choices || response.choices.length === 0) {
@@ -51,7 +51,7 @@ async function main() {
     messages.push({
       role: "tool",
       tool_call_id: toolCall.id,
-      content: toolResult,
+      content: toolResult ?? "",
     });
   }
 }

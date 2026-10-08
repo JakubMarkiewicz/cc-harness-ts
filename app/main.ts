@@ -37,6 +37,8 @@ async function main() {
   const toolCall = response.choices[0].message.tool_calls?.[0];
   if (toolCall) {
     await executeTool(toolCall);
+  } else {
+    console.log(Object.keys(Tools).length);
   }
 }
 

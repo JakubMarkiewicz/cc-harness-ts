@@ -16,7 +16,8 @@ export async function executeTool(
   const executor = tool.executor;
 
   try {
-    await executor(toolCall.function.arguments);
+    const res = await executor(toolCall.function.arguments);
+    return res;
   } catch (e) {
     throw new Error(`Couldn't run ${name} tool\n ${e}`);
   }

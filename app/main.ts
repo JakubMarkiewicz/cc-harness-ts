@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { Tools } from "./tools";
 import { executeTool } from "./utils";
 import { ToolEnum } from "./types";
+import type { ChatCompletionMessageParam } from "openai/resources";
 
 async function main() {
   const [, , flag, prompt] = process.argv;
@@ -21,24 +22,37 @@ async function main() {
     baseURL: baseURL,
   });
 
-  const response = await client.chat.completions.create({
-    model: "anthropic/claude-haiku-4.5",
-    messages: [{ role: "user", content: prompt }],
-    tools: [Tools[ToolEnum.Read].definition],
-  });
+  const messages: ChatCompletionMessageParam[] = [
+    { role: "user", content: prompt },
+  ];
 
-  if (!response.choices || response.choices.length === 0) {
-    throw new Error("no choices in response");
-  }
+  while (true) {
+    const response = await client.chat.completions.create({
+      model: "anthropic/claude-haiku-5.5",
+      messages,
+      tools: [Tools[ToolEnum.Read].definition],
+    });
 
-  // You can use print statements as follows for debugging, they'll be visible when running tests.
-  console.error("Logs from your program will appear here!");
+    if (!response.choices || response.choices.length === 0) {
+      throw new Error("no choices in response");
+    }
 
-  const toolCall = response.choices[0].message.tool_calls?.[0];
-  if (toolCall) {
-    await executeTool(toolCall);
-  } else {
-    console.log(response.choices[0].message.content);
+    const message = response.choices[0].message;
+    const toolCall = message.tool_calls?.[0];
+
+    if (!toolCall) {
+      console.log(response.choices[0].message.content);
+      break;
+    }
+
+    messages.push(message);
+
+    const toolResult = await executeTool(toolCall);
+    messages.push({
+      role: "tool",
+      tool_call_id: toolCall.id,
+      content: toolResult,
+    });
   }
 }
 

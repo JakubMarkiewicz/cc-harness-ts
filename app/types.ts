@@ -6,5 +6,5 @@ export enum ToolEnum {
 
 export type Tool = {
   definition: OpenAI.ChatCompletionTool;
-  executor: (args: string) => Promise<void>;
+  executor: (args: string) => Promise<string>;
 };

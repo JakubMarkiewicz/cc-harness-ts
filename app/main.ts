@@ -38,7 +38,7 @@ async function main() {
   if (toolCall) {
     await executeTool(toolCall);
   } else {
-    console.log(Object.keys(Tools).length);
+    console.log(response.choices[0].message.content);
   }
 }
 

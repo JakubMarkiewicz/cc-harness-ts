@@ -5,7 +5,7 @@ import { open } from "node:fs/promises";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { existsSync } from "node:fs";
 
-const CLAUDE_PATH = "./claude";
+const CLAUDE_PATH = ".claude";
 const SKILLS_PATH = join(CLAUDE_PATH, "skills");
 
 async function assertSkillsDirExists() {
@@ -84,4 +84,15 @@ export async function getSkillsSystemPrompt(): Promise<ChatCompletionMessagePara
     role: "system",
     content: `You have access to the following skills:\n\n${skillsPrompt}`,
   };
+}
+
+export async function getSkillContent(skillName: string): Promise<string> {
+  const skills = await getSkills();
+
+  const skill = skills.get(skillName);
+  if (!skill) {
+    throw new Error(`Invalid skill: ${skillName}`);
+  }
+
+  return skill.content;
 }

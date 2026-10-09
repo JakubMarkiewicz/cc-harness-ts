@@ -3,7 +3,6 @@ import util from "node:util";
 
 import type OpenAI from "openai";
 import type { Tool } from "../types";
-import { join } from "node:path";
 
 const definition: OpenAI.ChatCompletionTool = {
   type: "function",

@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { executeTool, getAllTools } from "./utils";
 import type { ChatCompletionMessageParam } from "openai/resources";
+import { getSkillsSystemPrompt } from "./skills/utils";
 
 async function main() {
   const [, , flag, prompt] = process.argv;
@@ -20,7 +21,9 @@ async function main() {
     baseURL: baseURL,
   });
 
+  const skillsPrompt = await getSkillsSystemPrompt();
   const messages: ChatCompletionMessageParam[] = [
+    skillsPrompt,
     { role: "user", content: prompt },
   ];
 

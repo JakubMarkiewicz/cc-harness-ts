@@ -1,7 +1,5 @@
 import OpenAI from "openai";
-import { Tools } from "./tools";
 import { executeTool, getAllTools } from "./utils";
-import { ToolEnum } from "./types";
 import type { ChatCompletionMessageParam } from "openai/resources";
 
 async function main() {

@@ -3,6 +3,7 @@ import util from "node:util";
 
 import type OpenAI from "openai";
 import type { Tool } from "../types";
+import { join } from "node:path";
 
 const definition: OpenAI.ChatCompletionTool = {
   type: "function",
@@ -33,7 +34,9 @@ function parseArgs(args: string): Parameters {
 async function executor(args: string) {
   const { command } = parseArgs(args);
 
-  const { stdout, stderr } = await util.promisify(exec)(command, { cwd: "./" });
+  const { stdout, stderr } = await util.promisify(exec)(command, {
+    cwd: "./",
+  });
 
   return stdout ?? stderr;
 }

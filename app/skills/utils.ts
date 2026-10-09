@@ -65,7 +65,7 @@ async function parseSkill(name: string): Promise<Skill> {
       continue;
     }
 
-    content += line;
+    content += line + "\n";
   }
 
   return { name: meta.name, description: meta.description, content };
@@ -86,7 +86,8 @@ export async function getSkillsSystemPrompt(): Promise<ChatCompletionMessagePara
   };
 }
 
-export async function getSkillContent(skillName: string): Promise<string> {
+export async function getSkillContent(skillCmd: string): Promise<string> {
+  const [skillName, ...skillArgs] = skillCmd.split(" ");
   const skills = await getSkills();
 
   const skill = skills.get(skillName);
@@ -94,5 +95,41 @@ export async function getSkillContent(skillName: string): Promise<string> {
     throw new Error(`Invalid skill: ${skillName}`);
   }
 
+  if (skillArgs.length > 0) {
+    return insertSkillArgs(skill.content, skillArgs);
+  }
+
   return skill.content;
+}
+
+function insertSkillArgs(content: string, skillArgs: string[]): string {
+  const parts = content.replaceAll("\n", " \n ").split(" ");
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+
+    if (!part.startsWith("$")) {
+      continue;
+    }
+
+    if (part.startsWith("$ARGUMENTS")) {
+      const idxMatch = part.match(/\$ARGUMNETS\[(\d+)\]/);
+
+      if (idxMatch?.at(1)) {
+        parts[i] = idxMatch.at(1) as string;
+        continue;
+      }
+
+      parts[i] = skillArgs.join(" ");
+      continue;
+    }
+
+    if (part.match(/\$\d+/g)) {
+      const argIdx = Number(part.slice(1));
+      console.log({ part, argIdx, skillArgs });
+      parts[i] = skillArgs[argIdx];
+    }
+  }
+
+  return parts.join(" ");
 }

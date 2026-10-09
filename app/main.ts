@@ -25,6 +25,7 @@ async function main() {
   const userPrompt = prompt.startsWith("/")
     ? await getSkillContent(prompt.slice(1))
     : prompt;
+
   const messages: ChatCompletionMessageParam[] = [
     skillsPrompt,
     { role: "user", content: userPrompt },

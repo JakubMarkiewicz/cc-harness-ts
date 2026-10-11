@@ -86,50 +86,66 @@ export async function getSkillsSystemPrompt(): Promise<ChatCompletionMessagePara
   };
 }
 
-export async function getSkillContent(skillCmd: string): Promise<string> {
-  const [skillName, ...skillArgs] = skillCmd.split(" ");
-  const skills = await getSkills();
+function extractSkillsArgs(skillCmd: string): {
+  skills: string[];
+  args: string[];
+} {
+  const parts = skillCmd.split(" ");
+  const skills = [];
+  const args = [];
 
-  const skill = skills.get(skillName);
-  if (!skill) {
-    throw new Error(`Invalid skill: ${skillName}`);
+  let isCommand = true;
+
+  for (const part of parts) {
+    if (isCommand && part.startsWith("/")) {
+      skills.push(part.slice(1));
+    } else {
+      isCommand = false;
+      args.push(part);
+    }
   }
 
-  if (skillArgs.length > 0) {
-    return insertSkillArgs(skill.content, skillArgs);
+  return { skills, args };
+}
+
+export async function getSkillContent(skillCmd: string): Promise<string[]> {
+  const { skills, args } = extractSkillsArgs(skillCmd);
+  const skillsMap = await getSkills();
+
+  const skillsContent = [];
+
+  for (const skillName of skills) {
+    const skill = skillsMap.get(skillName);
+    if (!skill) {
+      throw new Error(`Invalid skill: ${skillName}`);
+    }
+
+    skillsContent.push(insertSkillArgs(skill.content, args));
   }
 
-  return skill.content;
+  return skillsContent;
 }
 
 function insertSkillArgs(content: string, skillArgs: string[]): string {
-  const parts = content.replaceAll("\n", " \n ").split(" ");
+  const replaced = content.replace(
+    /(\$ARGUMENTS\[\d+\])|(\$ARGUMENTS)|(\$\d+)/g,
+    (value) => {
+      if (value === "$ARGUMENTS") {
+        return skillArgs.join(" ");
+      }
+      if (value.startsWith("$ARGUMENTS")) {
+        const idxMatch = value.match(/\$ARGUMENTS\[(\d+)\]/);
 
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-
-    if (!part.startsWith("$")) {
-      continue;
-    }
-
-    if (part.startsWith("$ARGUMENTS")) {
-      const idxMatch = part.match(/\$ARGUMNETS\[(\d+)\]/);
-
-      if (idxMatch?.at(1)) {
-        parts[i] = idxMatch.at(1) as string;
-        continue;
+        if (idxMatch?.at(1)) {
+          const idx = Number(idxMatch.at(1));
+          return skillArgs[idx];
+        }
       }
 
-      parts[i] = skillArgs.join(" ");
-      continue;
-    }
+      const argIdx = Number(value.slice(1));
+      return skillArgs[argIdx];
+    },
+  );
 
-    if (part.match(/\$\d+/g)) {
-      const argIdx = Number(part.slice(1));
-      console.log({ part, argIdx, skillArgs });
-      parts[i] = skillArgs[argIdx];
-    }
-  }
-
-  return parts.join(" ");
+  return replaced;
 }

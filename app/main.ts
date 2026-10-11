@@ -22,13 +22,17 @@ async function main() {
   });
 
   const skillsPrompt = await getSkillsSystemPrompt();
-  const userPrompt = prompt.startsWith("/")
-    ? await getSkillContent(prompt.slice(1))
-    : prompt;
+  const userPrompts = prompt.startsWith("/")
+    ? await getSkillContent(prompt)
+    : [prompt];
+
+  const completionMessages: ChatCompletionMessageParam[] = userPrompts.map(
+    (content) => ({ role: "user", content }),
+  );
 
   const messages: ChatCompletionMessageParam[] = [
     skillsPrompt,
-    { role: "user", content: userPrompt },
+    ...completionMessages,
   ];
 
   while (true) {

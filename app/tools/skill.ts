@@ -1,5 +1,6 @@
 import type OpenAI from "openai";
 import type { Tool } from "../types";
+import { getSkillContent } from "../skills/utils";
 
 const definition: OpenAI.ChatCompletionTool = {
   type: "function",
@@ -31,8 +32,11 @@ function parseArgs(args: string): Parameters {
 
 async function executor(exArgs: string) {
   const { name, args } = parseArgs(exArgs);
+  const cmd = `/${name} ${args}`;
 
-  return `/${name} ${args}`;
+  const skillContent = await getSkillContent(cmd);
+
+  return skillContent.join("\n\n");
 }
 
 export const BASH_TOOL = {

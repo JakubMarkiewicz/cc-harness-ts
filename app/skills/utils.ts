@@ -30,7 +30,7 @@ export async function getSkillsSystemPrompt(): Promise<ChatCompletionMessagePara
 
   return {
     role: "system",
-    content: `You have access to the following skills:\n\n${skillsPrompt}`,
+    content: `You have access to the following skills:\n\n${skillsPrompt}\n\nIf a skill matches the user's request, call the Skill tool with its name and follow the instructions it returns.`,
   };
 }
 

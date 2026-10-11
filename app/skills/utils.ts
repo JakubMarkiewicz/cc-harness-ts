@@ -7,6 +7,8 @@ import { existsSync } from "node:fs";
 
 const CLAUDE_PATH = ".claude";
 const SKILLS_PATH = `${CLAUDE_PATH}/skills` as const;
+const SCRIPTS_PATH = (skillName: string) =>
+  `${SKILLS_PATH}/${skillName}/scripts` as const;
 
 export async function getSkills(): Promise<Map<string, Skill>> {
   await assertSkillsDirExists();
@@ -130,8 +132,14 @@ async function buildSkill(
     throw new Error(`Invalid skill: ${skillName}`);
   }
 
-  const path = `${SKILLS_PATH}/${skillName}`;
-  const instruction = `Skill: ${skillName} (located at: ${path})\nPaths in the instructions below are relative to that folder.`;
+  let instruction = "";
+
+  const hasScripts = existsSync(SCRIPTS_PATH(skillName));
+
+  if (hasScripts) {
+    const path = `${SKILLS_PATH}/${skillName}`;
+    instruction += `Skill: ${skillName} (located at: ${path})\nPaths in the instructions below are relative to that folder.`;
+  }
 
   const content = insertSkillArgs(skill.content, skillArgs);
 

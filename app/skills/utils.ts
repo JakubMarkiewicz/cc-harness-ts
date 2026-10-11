@@ -6,15 +6,7 @@ import type { ChatCompletionMessageParam } from "openai/resources";
 import { existsSync } from "node:fs";
 
 const CLAUDE_PATH = ".claude";
-const SKILLS_PATH = join(CLAUDE_PATH, "skills");
-
-async function assertSkillsDirExists() {
-  const skillsPathExists = existsSync(SKILLS_PATH);
-  if (!skillsPathExists) {
-    await mkdir(CLAUDE_PATH);
-    await mkdir(SKILLS_PATH);
-  }
-}
+const SKILLS_PATH = `${CLAUDE_PATH}/skills` as const;
 
 export async function getSkills(): Promise<Map<string, Skill>> {
   await assertSkillsDirExists();
@@ -23,6 +15,41 @@ export async function getSkills(): Promise<Map<string, Skill>> {
   const skills = await parseSkills(skillNames);
 
   return skills;
+}
+
+export async function getSkillsSystemPrompt(): Promise<ChatCompletionMessageParam> {
+  const skills = await getSkills();
+
+  let skillsPrompt = "";
+
+  for (const [key, value] of skills) {
+    skillsPrompt += `- ${key}: ${value.description}\n`;
+  }
+
+  return {
+    role: "system",
+    content: `You have access to the following skills:\n\n${skillsPrompt}`,
+  };
+}
+
+export async function getSkillContent(skillCmd: string): Promise<string[]> {
+  const { skills, args } = extractSkillsArgs(skillCmd);
+
+  const skillsContent = [];
+
+  for (const skillName of skills) {
+    skillsContent.push(await buildSkill(skillName, args));
+  }
+
+  return skillsContent;
+}
+
+async function assertSkillsDirExists() {
+  const skillsPathExists = existsSync(SKILLS_PATH);
+  if (!skillsPathExists) {
+    await mkdir(CLAUDE_PATH);
+    await mkdir(SKILLS_PATH);
+  }
 }
 
 async function parseSkills(names: string[]) {
@@ -71,21 +98,6 @@ async function parseSkill(name: string): Promise<Skill> {
   return { name: meta.name, description: meta.description, content };
 }
 
-export async function getSkillsSystemPrompt(): Promise<ChatCompletionMessageParam> {
-  const skills = await getSkills();
-
-  let skillsPrompt = "";
-
-  for (const [key, value] of skills) {
-    skillsPrompt += `- ${key}: ${value.description}\n`;
-  }
-
-  return {
-    role: "system",
-    content: `You have access to the following skills:\n\n${skillsPrompt}`,
-  };
-}
-
 function extractSkillsArgs(skillCmd: string): {
   skills: string[];
   args: string[];
@@ -108,22 +120,22 @@ function extractSkillsArgs(skillCmd: string): {
   return { skills, args };
 }
 
-export async function getSkillContent(skillCmd: string): Promise<string[]> {
-  const { skills, args } = extractSkillsArgs(skillCmd);
+async function buildSkill(
+  skillName: string,
+  skillArgs: string[],
+): Promise<string> {
   const skillsMap = await getSkills();
-
-  const skillsContent = [];
-
-  for (const skillName of skills) {
-    const skill = skillsMap.get(skillName);
-    if (!skill) {
-      throw new Error(`Invalid skill: ${skillName}`);
-    }
-
-    skillsContent.push(insertSkillArgs(skill.content, args));
+  const skill = skillsMap.get(skillName);
+  if (!skill) {
+    throw new Error(`Invalid skill: ${skillName}`);
   }
 
-  return skillsContent;
+  const path = `${SKILLS_PATH}/${skillName}`;
+  const instruction = `Skill: ${skillName} (located at: ${path})\nPaths in the instructions below are relative to that folder.`;
+
+  const content = insertSkillArgs(skill.content, skillArgs);
+
+  return `${instruction}\n\n${content}`;
 }
 
 function insertSkillArgs(content: string, skillArgs: string[]): string {

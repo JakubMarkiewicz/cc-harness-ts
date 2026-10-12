@@ -1,5 +1,6 @@
 import type OpenAI from "openai";
 import type { Tool } from "../types";
+import z from "zod";
 
 const definition: OpenAI.ChatCompletionTool = {
   type: "function",
@@ -23,17 +24,13 @@ const definition: OpenAI.ChatCompletionTool = {
   },
 };
 
-type Parameters = {
-  file_path: string;
-  content: string;
-};
-
-function parseArgs(args: string): Parameters {
-  return JSON.parse(args);
-}
+const Parameters = z.object({
+  file_path: z.string().min(1, { error: "file_path is required" }),
+  content: z.string().min(1, { error: "content is required" }),
+});
 
 async function executor(args: string) {
-  const { file_path, content } = parseArgs(args);
+  const { file_path, content } = Parameters.parse(args);
 
   const file = Bun.file(file_path);
 

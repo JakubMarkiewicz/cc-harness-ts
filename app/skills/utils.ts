@@ -10,7 +10,7 @@ import { buildClient } from "../utils";
 const CLAUDE_PATH = ".claude";
 const SKILLS_PATH = `${CLAUDE_PATH}/skills` as const;
 
-export async function getSkills(): Promise<Map<string, Skill>> {
+export async function getAvailableSkills(): Promise<Map<string, Skill>> {
   await assertSkillsDirExists();
 
   const skillNames = await readdir(SKILLS_PATH);
@@ -19,8 +19,8 @@ export async function getSkills(): Promise<Map<string, Skill>> {
   return skills;
 }
 
-export async function getSkillsSystemPrompt(): Promise<ChatCompletionMessageParam> {
-  const skills = await getSkills();
+export async function buildAvailableSkillsPrompt(): Promise<ChatCompletionMessageParam> {
+  const skills = await getAvailableSkills();
 
   let skillsPrompt = "";
 
@@ -30,20 +30,24 @@ export async function getSkillsSystemPrompt(): Promise<ChatCompletionMessagePara
 
   return {
     role: "system",
-    content: `You have access to the following skills:\n\n${skillsPrompt}\n\nIf a skill matches the user's request, call the Skill tool with its name and follow the instructions it returns.`,
+    content: `You have access to the following skills:
+
+			${skillsPrompt}
+
+		If a skill matches the user's request, call the Skill tool with its name and follow the instructions it returns.`,
   };
 }
 
 export async function getSkillContent(skillCmd: string): Promise<string[]> {
   const { skills, args } = extractSkillsArgs(skillCmd);
 
-  const skillsContent = [];
+  const skillsContentPromises: Promise<string>[] = [];
 
   for (const skillName of skills) {
-    skillsContent.push(await buildSkill(skillName, args));
+    skillsContentPromises.push(buildSkill(skillName, args));
   }
 
-  return skillsContent;
+  return Promise.all(skillsContentPromises);
 }
 
 async function assertSkillsDirExists() {
@@ -70,14 +74,14 @@ async function parseSkill(name: string): Promise<Skill> {
   const file = await open(skillPath);
   const skillFile = await readFile(file, { encoding: "utf-8" });
 
+  const meta: Omit<Skill, "content"> = { name, description: "", context: null };
+
   const lines = skillFile.split("\n");
 
-  const meta: Omit<Skill, "content"> = { name, description: "", context: null };
   let content = "";
-
   let isMeta = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+
+  for (const line of lines) {
     if (line === "---") {
       isMeta = !isMeta;
       continue;
@@ -126,7 +130,7 @@ async function buildSkill(
   skillName: string,
   skillArgs: string[],
 ): Promise<string> {
-  const skillsMap = await getSkills();
+  const skillsMap = await getAvailableSkills();
   const skill = skillsMap.get(skillName);
   if (!skill) {
     throw new Error(`Invalid skill: ${skillName}`);
@@ -139,10 +143,10 @@ async function buildSkill(
 
   const content = insertSkillArgs(skill.content, skillArgs);
 
-  // subagent
   if (skill.context === "fork") {
     const client = buildClient(content);
-    return (await agentLoop(client, content)) ?? "";
+    const subAgent = await agentLoop(client, content);
+    return subAgent ?? "";
   }
 
   return `${instruction}\n\n${content}`;

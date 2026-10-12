@@ -1,10 +1,11 @@
 import type OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { getSkillContent, getSkillsSystemPrompt } from "./skills/utils";
+import { getSkillContent, buildAvailableSkillsPrompt } from "./skills/utils";
 import { executeTool, getAllTools } from "./utils";
+import { ENV } from "./env";
 
 export async function agentLoop(client: OpenAI, prompt: string) {
-  const skillsPrompt = await getSkillsSystemPrompt();
+  const skillsPrompt = await buildAvailableSkillsPrompt();
 
   const firstMessage = await processFirstMessage(prompt);
 
@@ -42,7 +43,7 @@ async function chatCall(
   messages: ChatCompletionMessageParam[],
 ) {
   const response = await client.chat.completions.create({
-    model: "anthropic/claude-haiku-5.5",
+    model: ENV.OPENROUTER_MODEL,
     messages,
     tools: getAllTools(),
   });

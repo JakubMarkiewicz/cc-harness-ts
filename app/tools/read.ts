@@ -1,5 +1,6 @@
 import type OpenAI from "openai";
 import { ToolEnum, type Tool } from "../types";
+import z from "zod";
 
 const definition: OpenAI.ChatCompletionTool = {
   type: "function",
@@ -7,6 +8,7 @@ const definition: OpenAI.ChatCompletionTool = {
     name: ToolEnum.Read,
     description: "Read and return the contents of a file",
     parameters: {
+      required: ["file_path"],
       type: "object",
       properties: {
         file_path: {
@@ -14,22 +16,16 @@ const definition: OpenAI.ChatCompletionTool = {
           description: "The path to the file to read",
         },
       },
-      required: ["file_path"],
     },
   },
 };
 
-// TODO: Figure out if it's possible to derive it from
-type Parameters = {
-  file_path: string;
-};
-
-function parseArgs(args: string): Parameters {
-  return JSON.parse(args);
-}
+const Parameters = z.object({
+  file_path: z.string().min(1, { error: "file_path is required" }),
+});
 
 async function executor(args: string) {
-  const { file_path } = parseArgs(args);
+  const { file_path } = Parameters.parse(args);
 
   const file = Bun.file(file_path);
   const fileContent = await file.text();

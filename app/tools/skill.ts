@@ -1,6 +1,7 @@
 import type OpenAI from "openai";
 import type { Tool } from "../types";
 import { getSkillContent } from "../skills/utils";
+import z from "zod";
 
 const definition: OpenAI.ChatCompletionTool = {
   type: "function",
@@ -21,17 +22,13 @@ const definition: OpenAI.ChatCompletionTool = {
   },
 };
 
-type Parameters = {
-  name: string;
-  args: string;
-};
-
-function parseArgs(args: string): Parameters {
-  return JSON.parse(args);
-}
+const Parameters = z.object({
+  name: z.string().min(1, { error: "Name is required" }),
+  args: z.string(),
+});
 
 async function executor(exArgs: string) {
-  const { name, args } = parseArgs(exArgs);
+  const { name, args } = Parameters.parse(exArgs);
   const cmd = `/${name} ${args}`;
 
   const skillContent = await getSkillContent(cmd);

@@ -3,6 +3,7 @@ import util from "node:util";
 
 import type OpenAI from "openai";
 import type { Tool } from "../types";
+import z from "zod";
 
 const definition: OpenAI.ChatCompletionTool = {
   type: "function",
@@ -22,16 +23,12 @@ const definition: OpenAI.ChatCompletionTool = {
   },
 };
 
-type Parameters = {
-  command: string;
-};
-
-function parseArgs(args: string): Parameters {
-  return JSON.parse(args);
-}
+const Parameters = z.object({
+  command: z.string().min(1, { error: "Command is required" }),
+});
 
 async function executor(args: string) {
-  const { command } = parseArgs(args);
+  const { command } = Parameters.parse(args);
 
   const { stdout, stderr } = await util.promisify(exec)(command, {
     cwd: "./",

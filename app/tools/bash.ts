@@ -28,7 +28,7 @@ const Parameters = z.object({
 });
 
 async function executor(args: string) {
-  const { command } = Parameters.parse(args);
+  const { command } = Parameters.parse(JSON.parse(args));
 
   const { stdout, stderr } = await util.promisify(exec)(command, {
     cwd: "./",

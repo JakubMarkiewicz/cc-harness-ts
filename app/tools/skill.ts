@@ -24,11 +24,11 @@ const definition: OpenAI.ChatCompletionTool = {
 
 const Parameters = z.object({
   name: z.string().min(1, { error: "Name is required" }),
-  args: z.string(),
+  args: z.string().nullish(),
 });
 
 async function executor(exArgs: string) {
-  const { name, args } = Parameters.parse(exArgs);
+  const { name, args } = Parameters.parse(JSON.parse(exArgs));
   const cmd = `/${name} ${args}`;
 
   const skillContent = await getSkillContent(cmd);

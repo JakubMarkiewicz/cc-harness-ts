@@ -25,7 +25,7 @@ const Parameters = z.object({
 });
 
 async function executor(args: string) {
-  const { file_path } = Parameters.parse(args);
+  const { file_path } = Parameters.parse(JSON.parse(args));
 
   const file = Bun.file(file_path);
   const fileContent = await file.text();

@@ -4,11 +4,11 @@ import type { Skill } from "../types";
 import { open } from "node:fs/promises";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { existsSync } from "node:fs";
+import { agentLoop } from "../loop";
+import { buildClient } from "../utils";
 
 const CLAUDE_PATH = ".claude";
 const SKILLS_PATH = `${CLAUDE_PATH}/skills` as const;
-const SCRIPTS_PATH = (skillName: string) =>
-  `${SKILLS_PATH}/${skillName}/scripts` as const;
 
 export async function getSkills(): Promise<Map<string, Skill>> {
   await assertSkillsDirExists();
@@ -72,7 +72,7 @@ async function parseSkill(name: string): Promise<Skill> {
 
   const lines = skillFile.split("\n");
 
-  const meta = { name, description: "" };
+  const meta: Omit<Skill, "content"> = { name, description: "", context: null };
   let content = "";
 
   let isMeta = false;
@@ -97,7 +97,7 @@ async function parseSkill(name: string): Promise<Skill> {
     content += line + "\n";
   }
 
-  return { name: meta.name, description: meta.description, content };
+  return { ...meta, content };
 }
 
 function extractSkillsArgs(skillCmd: string): {
@@ -134,14 +134,16 @@ async function buildSkill(
 
   let instruction = "";
 
-  const hasScripts = existsSync(SCRIPTS_PATH(skillName));
-
-  if (hasScripts) {
-    const path = `${SKILLS_PATH}/${skillName}`;
-    instruction += `Skill: ${skillName} (located at: ${path})\nPaths in the instructions below are relative to that folder.`;
-  }
+  const path = `${SKILLS_PATH}/${skillName}`;
+  instruction += `Skill: ${skillName} (located at: ${path})\nPaths in the instructions below are relative to that folder.`;
 
   const content = insertSkillArgs(skill.content, skillArgs);
+
+  // subagent
+  if (skill.context === "fork") {
+    const client = buildClient(content);
+    return (await agentLoop(client, content)) ?? "";
+  }
 
   return `${instruction}\n\n${content}`;
 }

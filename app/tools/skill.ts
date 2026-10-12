@@ -39,7 +39,7 @@ async function executor(exArgs: string) {
   return skillContent.join("\n\n");
 }
 
-export const BASH_TOOL = {
+export const SKILL_TOOL = {
   definition,
   executor,
 } satisfies Tool;

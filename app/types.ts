@@ -4,6 +4,7 @@ export enum ToolEnum {
   Read = "Read",
   Write = "Write",
   Bash = "Bash",
+  Skill = "Skill",
 }
 
 export type Tool = {
@@ -14,5 +15,6 @@ export type Tool = {
 export type Skill = {
   name: string;
   description: string;
+  context: string | null;
   content: string;
 };

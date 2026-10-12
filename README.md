@@ -1,34 +1,63 @@
+# claude-code-typescript
+
+A minimal coding agent built in TypeScript for the [CodeCrafters "Build your own Claude Code" challenge](https://app.codecrafters.io/users/JakubMarkiewicz?r=2qF) — a ~200-line CLI that can chat with an LLM, call tools, read/write files, and load skills.
+
 [![progress-banner](https://backend.codecrafters.io/progress/claude-code/5faea99a-8f80-47e7-8efb-7aaa224357c7)](https://app.codecrafters.io/users/JakubMarkiewicz?r=2qF)
 
-This is a starting point for TypeScript solutions to the
-["Build Your own Claude Code" Challenge](https://codecrafters.io/challenges/claude-code).
+## How it works
 
-Claude Code is an AI coding assistant that uses Large Language Models (LLMs) to
-understand code and perform actions through tool calls. In this challenge,
-you'll build your own Claude Code from scratch by implementing an LLM-powered
-coding assistant.
+The agent is a simple loop:
 
-Along the way you'll learn about HTTP RESTful APIs, OpenAI-compatible tool
-calling, agent loop, and how to integrate multiple tools into an AI assistant.
+1. Send the conversation (system prompt + skills) to an LLM via OpenRouter.
+2. If the model responds with a tool call, execute it and append the result to the conversation.
+3. If it responds with plain text, print it and stop.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+Built with [Bun](https://bun.sh), the OpenAI SDK (pointed at OpenRouter), and Zod for tool argument validation.
 
-# Passing the first stage
-
-The entry point for your `claude-code` implementation is in `app/main.ts`. Study
-and uncomment the relevant code, and submit to pass the first stage:
-
-```sh
-codecrafters submit
+```
+app/
+├── main.ts      # CLI entrypoint: `bun run app/main.ts "<prompt>"`
+├── loop.ts      # agent loop — LLM calls + tool execution
+├── env.ts       # environment config (OpenRouter key, model, base URL)
+├── types.ts
+├── utils.ts     # client setup, tool dispatch
+├── tools/       # tools the agent can call
+│   ├── bash.ts  #   run shell commands
+│   ├── read.ts  #   read files
+│   ├── write.ts #   write files
+│   └── skill.ts #   load skill files
+└── skills/      # skill discovery & prompt building
 ```
 
-# Stage 2 & beyond
+## Setup
 
-Note: This section is for stages 2 and beyond.
+1. Install [Bun](https://bun.sh) if you don't have it.
+2. Install dependencies:
 
-1. Ensure you have `bun (1.3)` installed locally.
-2. Run `./your_program.sh` to run your program, which is implemented in
-   `app/main.ts`.
-3. Run `codecrafters submit` to submit your solution to CodeCrafters. Test
-   output will be streamed to your terminal.
+   ```bash
+   bun install
+   ```
+
+3. Set the required environment variables:
+
+   | Variable | Description | Default |
+   |---|---|---|
+   | `OPENROUTER_API_KEY` | Your OpenRouter API key (**required**) | — |
+   | `OPENROUTER_MODEL` | Model identifier on OpenRouter | `anthropic/claude-haiku-5.5` |
+   | `OPENROUTER_BASE_URL` | OpenAI-compatible API base URL | `https://openrouter.ai/api/v1` |
+
+## Usage
+
+```bash
+bun run app/main.ts "Explain what this repo does"
+```
+
+The agent will answer directly, or use its tools (`bash`, `read`, `write`, `skill`) to inspect and modify files before answering.
+
+## CodeCrafters
+
+This repo is a starter for the [CodeCrafters claude-code challenge](https://codecrafters.io). Tests are run via `your_program.sh` using the CodeCrafters CLI:
+
+```bash
+codecrafters test
+```
